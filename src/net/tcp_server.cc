@@ -1,5 +1,5 @@
 //
-// Created by DW on 2017/11/17.
+// Created by xiao shutong on 2017/11/17.
 //
 
 #include <tcp_server.h>
@@ -109,9 +109,11 @@ void DefaultTcpConnectedCb(Acceptor* acceptor) {
 //}
 
 void DefaultTcpConnectionReadCallback(TcpConnection *connection) {
-  BufferReader reader(10);
+  Buffer buf(1024);
+  BufferReader reader(buf);
   connection->read(reader);
 
-  std::cout << "TcpConnection read content " << reader.getBufData() <<
+  std::string msg(buf.seekHead(), buf.size());
+  std::cout << "TcpConnection read content " << msg <<
             std::endl;
 }

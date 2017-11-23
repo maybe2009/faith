@@ -8,6 +8,93 @@
 using std::map;
 using std::make_pair;
 
+class BinaryReader {
+ public:
+  BinaryReader(void *src, size_t len) :
+      binary_(static_cast<char *>(src)),
+      len_(len),
+      cur_index_(0),
+      remain_size_(len)
+  {}
+
+  size_t pop() {
+    if (remain_size_ < 1) {
+      return 0;
+    }
+
+    cur_index_++;
+    remain_size_--;
+    return 1;
+  }
+
+  template<typename T>
+  size_t pop(T *dst) {
+    size_t type_size = sizeof(T);
+    if (type_size > remain_size_) {
+      return 0;
+    }
+
+    *dst = *const_cast<T*>(binary_ + cur_index_);
+    cur_index_ += sizeof(T);
+    remain_size_ -= sizeof(T);
+    return sizeof(T);
+  }
+
+  size_t pop(void* dst, size_t size) {
+    if (size > remain_size_) {
+      return 0;
+    }
+
+    memcpy(dst, binary_, size);
+    cur_index_ += size;
+    remain_size_ -= size;
+    return size;
+  }
+
+  size_t popUntil(void* dst, size_t max_len, char v) {
+    size_t end_idx = cur_index_;
+    for (; end_idx < len_; end_idx++) {
+      if (v == *(binary_+end_idx)) {
+        break;
+      }
+    }
+
+    if (end_idx == len_) {
+      return 0;
+    }
+
+    size_t count = end_idx - cur_index_ + 1;
+    //if count is 0, the first byte is v. Otherwise, omit last byte(v itself)
+    if (0 == count) {
+      return 0;
+    } else {
+      count--;
+      count = count > max_len ? max_len : count;
+      memcpy(dst, binary_ + cur_index_, count);
+    }
+
+    cur_index_ += count;
+    remain_size_-= count;
+
+    return count;
+  }
+
+  size_t skipWhiteSpace() {
+    size_t count = 0;
+    for (; cur_index_ < len_; cur_index_++, remain_size_--, count++) {
+      if (!isspace(binary_[cur_index_])) {
+        return count;
+      }
+    }
+  }
+
+ private:
+  const char *const binary_;
+  size_t len_;
+  size_t cur_index_;
+  size_t remain_size_;
+};
+
 class Buffer {
   typedef char BYTE;
 
@@ -68,20 +155,8 @@ class Buffer {
     return curIndex_;
   }
 
-  uint8_t popUint8() {
-    uint8_t *ptr = (uint8_t *) popPos_;
-    popPos_ = (BYTE *) ((uint8_t *) popPos_ + 1);
-    return *ptr;
-  }
-
-  bool popN(void *dst, uint64_t n) {
-    if (popPos_ + n > buffer_ + capacity_) {
-      return false;
-    } else {
-      memcpy(dst, popPos_, n);
-      popPos_ += n;
-      return true;
-    }
+  BinaryReader getReader() const {
+    return BinaryReader(buffer_, capacity_);
   }
 
   ~Buffer() {
@@ -94,38 +169,5 @@ class Buffer {
   uint64_t freeSize_;
   BYTE *buffer_;
   BYTE *popPos_;
-};
-
-class SocketBuffer {
- public:
-  Buffer *getReadBuffer(int fd) const {
-    return socketReadBuffer_.at(fd);
-  }
-
-  Buffer *getWriteBuffer(int fd) const {
-    return socketWriteBuffer_.at(fd);
-  }
-
-  void allocateBufferForSocket(int fd, uint64_t size) {
-    Buffer *rdBuf = new Buffer(size);
-    socketReadBuffer_.insert(make_pair(fd, rdBuf));
-
-    Buffer *wrBuf = new Buffer(size);
-    socketWriteBuffer_.insert(make_pair(fd, wrBuf));
-  }
-
-  ~SocketBuffer() {
-    for (auto buf : socketReadBuffer_) {
-      delete buf.second;
-    }
-
-    for (auto buf : socketWriteBuffer_) {
-      delete buf.second;
-    }
-  }
-
- private:
-  map<int, Buffer *> socketReadBuffer_;
-  map<int, Buffer *> socketWriteBuffer_;
 };
 #endif

@@ -1,5 +1,5 @@
 //
-// Created by DW on 2017/11/17.
+// Created by xiao shutong on 2017/11/17.
 //
 
 #ifndef EPOLL_IOUTILITY_H
@@ -24,7 +24,7 @@ class IOWriter {
 
 class BufferReader : public IOReader {
  public:
-  BufferReader(uint64_t buf_size) : buf_(buf_size) {}
+  BufferReader(Buffer &buffer) : buf_(buffer) {}
 
   uint64_t read(int fd) override {
     if (0 == buf_.freeSize()) {
@@ -49,7 +49,7 @@ class BufferReader : public IOReader {
   }
 
  private:
-  Buffer buf_;
+  Buffer& buf_;
 };
 
 class BufferWriter : public IOWriter {
