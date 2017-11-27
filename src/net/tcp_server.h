@@ -6,7 +6,7 @@
 #define EPOLL_TCPSERVER_H
 
 #include <simple_server_api.h>
-#include <Reactor.h>
+#include <Channel.h>
 #include <Processor.h>
 #include <io_utility.h>
 
@@ -18,12 +18,13 @@
 class Acceptor;
 class TcpConnection;
 class TcpServer;
+class AcceptorWrapper;
 
 typedef int TcpConnectionID;
-
-typedef std::function<void(TcpConnection*)> TcpReadCallback;
-typedef std::function<void(TcpConnection*)> TcpWriteCallback;
-typedef std::function<void(Acceptor*)> TcpConnectCallback;
+typedef std::function<void(TcpConnection *)> TcpReadCallback;
+typedef std::function<void(TcpConnection *)> TcpWriteCallback;
+typedef std::function<void(Acceptor *)> TcpConnectCallback;
+typedef std::function<void(AcceptorWrapper*)> AcceptorCallback;
 
 /*!
  * @brief Acceptor在构造时，需要传入一个处于监听状态（调用listen后）的socket。将该socket
@@ -31,7 +32,47 @@ typedef std::function<void(Acceptor*)> TcpConnectCallback;
  * setTcpConnectCallback设置的回调进行处理。同时Acceptor对外提供了accept方法建立链接，并
  * 返回新链接的socket
  */
-class Acceptor : public Reactor {
+class TcpAcceptor final {
+ public:
+  TcpAcceptor(Socket socket, Processor *processor);
+
+  ~TcpAcceptor();
+
+  void listen(int backlog);
+
+  Socket accept();
+
+  void setAcceptCallback(ReadCallback &callback);
+
+ private:
+  Socket socket_;
+  ChannelPtr channel_;
+};
+
+class AcceptorWrapper final {
+ public:
+  AcceptorWrapper(const char *ip,
+                  uint16_t port,
+                  Processor *processor);
+
+  ~AcceptorWrapper();
+
+  void setAcceptorCallback(AcceptorCallback callback);
+
+  void listen(int backlog);
+
+  Socket accept();
+
+ private:
+  void onConnect(ChannelPtr channel);
+
+ private:
+  Socket *socket_;
+  AcceptorCallback acceptorCallback_;
+  TcpAcceptor *acceptor_;
+};
+
+class Acceptor : public Channel {
  public:
   /*!
    * @brief 构造函数
@@ -39,7 +80,6 @@ class Acceptor : public Reactor {
    * @param server  处于监听状态（调用listen后）的socket
    */
   Acceptor(Processor *processor, Socket server);
-
 
   /*!
    * @brief 调用accept建立链接，返回新链接的socket
@@ -95,6 +135,7 @@ class TcpServer {
   Socket *server_;
   Acceptor *acceptor_;
   TcpConnectCallback onConnectCallback_;
+  TcpAcceptor *tcp_acceptor_;
 };
 
 /*!
@@ -102,7 +143,7 @@ class TcpServer {
  * 事件触发时，会调用相应的回调进行处理。回调可以通过相关成员函数来设置。读/写操作也进行了封装，
  * 外部需要使用IOReader及其子类来完成相应的操作。这么做可以避免直接对外暴露socket fd。
  */
-class TcpConnection : public Reactor {
+class TcpConnection : public Channel {
  public:
   TcpConnection(Processor *processor, const Socket &peer_);
 
@@ -144,7 +185,7 @@ class TcpConnection : public Reactor {
   TcpWriteCallback tcpWriteCallback_;
 };
 
-void DefaultTcpConnectedCb(Acceptor* acceptor);
+void DefaultTcpConnectedCb(Acceptor *acceptor);
 
 void DefaultTcpConnectionCallback(Processor *prosessor,
                                   TcpServer *server,

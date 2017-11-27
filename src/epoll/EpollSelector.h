@@ -5,7 +5,7 @@
 #ifndef EPOLL_EPOLLSELECTOR_H
 #define EPOLL_EPOLLSELECTOR_H
 
-#include <Reactor.h>
+#include <Channel.h>
 #include "Selector.h"
 
 #include <iostream>
@@ -23,7 +23,7 @@ class EpollSelector : public Selector {
   virtual void control(int fd,
                          EnumSelectorOption::Option op,
                          uint32_t ev,
-                         Reactor *reactor) override {
+                         Channel *reactor) override {
     struct epoll_event event;
     event.data.ptr = reactor;
 
@@ -49,7 +49,7 @@ class EpollSelector : public Selector {
     epoll_->control(option, fd, &event);
   }
 
-  virtual void select(std::vector<Reactor *> &active_reactors) {
+  virtual void select(std::vector<Channel *> &active_reactors) {
     struct epoll_event active_events[MAX_EVENTS];
 
     std::cout << "epoll select" << std::endl;
@@ -62,7 +62,7 @@ class EpollSelector : public Selector {
 
     for (uint32_t i = 0; i < events_num; i++) {
       struct epoll_event *event = active_events + i;
-      Reactor *reactor = static_cast<Reactor *>(event->data.ptr);
+      Channel *reactor = static_cast<Channel *>(event->data.ptr);
       assert(reactor!=nullptr);
 
       printf("incoming event is %x\n", event->events);

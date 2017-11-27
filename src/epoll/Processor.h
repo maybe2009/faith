@@ -6,11 +6,11 @@
 #define EPOLL_PROSESSOR_H
 
 #include <Selector.h>
-#include <Reactor.h>
+#include <Channel.h>
 #include <vector>
 
 class Selector;
-class Reactor;
+class Channel;
 
 class Processor {
  public:
@@ -19,7 +19,7 @@ class Processor {
   void update(int fd,
                 EnumSelectorOption::Option op,
                 uint32_t ev,
-                Reactor *reactor);
+                Channel *reactor);
 
   void process();
 

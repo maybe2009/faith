@@ -14,12 +14,12 @@ Processor::Processor(Selector *selector) : selector_(selector) {
 void Processor::update(int fd,
                        EnumSelectorOption::Option op,
                        uint32_t ev,
-                       Reactor *reactor) {
+                       Channel *reactor) {
   selector_->control(fd, op, ev, reactor);
 }
 
 void Processor::process() {
-  std::vector<Reactor *> active_reactors;
+  std::vector<Channel *> active_reactors;
   selector_->select(active_reactors);
 
   for (auto active : active_reactors) {

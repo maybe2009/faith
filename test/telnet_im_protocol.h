@@ -65,8 +65,8 @@ class TelnetIMDecoder {
     in.pop(&ch);
     if ('#' == ch) {
       char buf[100];
-      memset(buf, 0, 10);
-      size_t  len = in.popUntil(buf, 10, '#');
+      memset(buf, 0, 100);
+      size_t  len = in.popUntil(buf, 100, '#');
       in.pop();
       std::string msg(buf, len);
       out.msg = msg;
