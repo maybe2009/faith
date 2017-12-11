@@ -8,14 +8,26 @@
 using std::map;
 using std::make_pair;
 
+class BufferException : public std::exception {
+ public:
+  explicit BufferException(const char *what) : exception(), what_(what) {
+  }
+
+  const char *what() const noexcept override {
+    return what_.c_str();
+  }
+
+ private:
+  std::string what_;
+};
+
 class BinaryReader {
  public:
   BinaryReader(void *src, size_t len) :
       binary_(static_cast<char *>(src)),
       len_(len),
       cur_index_(0),
-      remain_size_(len)
-  {}
+      remain_size_(len) {}
 
   size_t pop() {
     if (remain_size_ < 1) {
@@ -34,13 +46,13 @@ class BinaryReader {
       return 0;
     }
 
-    *dst = *const_cast<T*>(binary_ + cur_index_);
+    *dst = *const_cast<T *>(binary_ + cur_index_);
     cur_index_ += sizeof(T);
     remain_size_ -= sizeof(T);
     return sizeof(T);
   }
 
-  size_t pop(void* dst, size_t size) {
+  size_t pop(void *dst, size_t size) {
     if (size > remain_size_) {
       return 0;
     }
@@ -51,21 +63,21 @@ class BinaryReader {
     return size;
   }
 
-  size_t popUntil(void* dst, size_t max_len, char v) {
+  size_t popUntil(void *dst, size_t max_len, char v) {
     size_t end_idx = cur_index_;
     for (; end_idx < len_; end_idx++) {
-      if (v == *(binary_+end_idx)) {
+      if (v==*(binary_ + end_idx)) {
         break;
       }
     }
 
-    if (end_idx == len_) {
+    if (end_idx==len_) {
       return 0;
     }
 
     size_t count = end_idx - cur_index_ + 1;
     //if count is 0, the first byte is v. Otherwise, omit last byte(v itself)
-    if (0 == count) {
+    if (0==count) {
       return 0;
     } else {
       count--;
@@ -74,7 +86,7 @@ class BinaryReader {
     }
 
     cur_index_ += count;
-    remain_size_-= count;
+    remain_size_ -= count;
 
     return count;
   }
@@ -116,8 +128,8 @@ class Buffer {
     return nwrite;
   }
 
-  uint64_t readFromFd(int fd, int* err) {
-    ssize_t  nread = ::read(fd, seekCurrent(), freeSize());
+  uint64_t readFromFd(int fd, int *err) {
+    ssize_t nread = ::read(fd, seekCurrent(), freeSize());
     if (nread < 0) {
       *err = errno;
       return 0;
@@ -153,6 +165,32 @@ class Buffer {
 
   uint64_t size() const {
     return curIndex_;
+  }
+
+  template<typename T>
+  size_t pop(T *dst) {
+    if (sizeof(T) > freeSize_) {
+      throw BufferException("expected pop size is larger then free size of "
+                                "buffer");
+    }
+
+    memcpy(dst, buffer_ + curIndex_, sizeof(T));
+    curIndex_ += sizeof(T);
+    freeSize_ -= sizeof(T);
+
+    return sizeof(T);
+  }
+
+  template<typename T>
+  size_t push(T *src) {
+    if (sizeof(T) > freeSize_) {
+      throw BufferException("expected push size is larger then free size of "
+                                "buffer");
+    }
+
+    memcpy(buffer_ + curIndex_, src, sizeof(T));
+
+    return sizeof(T);
   }
 
   BinaryReader getReader() const {

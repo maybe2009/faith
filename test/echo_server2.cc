@@ -8,19 +8,20 @@
 #include "telnet_im_protocol.h"
 
 #include <iostream>
+#include <memory>
 #include "telnet_im_protocol.h"
 
 using namespace std;
 
-map<int, ChannelPtr> fd_channel_map;
-map<string, ChannelPtr> name_channel_map;
+map<int, ChannelSP> fd_channel_map;
+map<string, ChannelSP> name_channel_map;
 
-void im_on_connection_closed(ChannelPtr channel) {
+void im_on_connection_closed(ChannelSP channel) {
   std::cout << "peer connection close" << std::endl;
   channel->close();
 }
 
-void im_on_write(ChannelPtr channel, std::string msg) {
+void im_on_write(ChannelSP channel, std::string msg) {
   BufferWriter writer(100);
   writer.load(msg.c_str(), msg.size());
 
@@ -28,7 +29,7 @@ void im_on_write(ChannelPtr channel, std::string msg) {
   channel->disableWrite();
 }
 
-void im_on_user_data(ChannelPtr channel) {
+void im_on_user_data(ChannelSP channel) {
   Buffer buf(100);
   BufferReader reader(buf);
   channel->read(reader);
@@ -46,7 +47,7 @@ void im_on_user_data(ChannelPtr channel) {
 
     auto peer = name_channel_map.find(user_msg.to);
     if (name_channel_map.end()!=peer) {
-      ChannelPtr peer_channel = peer->second;
+      ChannelSP peer_channel = peer->second;
       peer_channel->setWriteCallback(std::bind(im_on_write,
                                                std::placeholders::_1,
                                                user_msg.msg));
@@ -59,13 +60,13 @@ void im_on_user_data(ChannelPtr channel) {
   }
 }
 
-void im_on_user_connect(AcceptorWrapper *acceptorWrapper,
-                        Processor *processor) {
-  Socket socket = acceptorWrapper->accept();
+void im_on_user_connect(TcpAcceptorPtr acceptor,
+                        Processor *processor, ChannelSP channel) {
+  Socket socket = acceptor->accept();
   std::cout << "NEW Connection established. Peer ip " << socket_peer_ip
       (&socket) << " port " << socket_peer_port(&socket) << std::endl;
-  auto channel = std::make_shared<Channel>(socket.fd_, processor);
-  fd_channel_map.insert(make_pair(socket.fd_, channel));
+  auto new_channel = std::make_shared<Channel>(socket.fd_, processor);
+  fd_channel_map.insert(make_pair(socket.fd_, new_channel));
 
   channel->setReadCallback(im_on_user_data);
   channel->setCloseCallback(im_on_connection_closed);
@@ -73,12 +74,18 @@ void im_on_user_connect(AcceptorWrapper *acceptorWrapper,
 }
 
 int main(int argc, const char *argv[]) {
-  Processor *processor = new Processor(new EpollSelector());
-  AcceptorWrapper acceptor("127.0.0.1", 7758, processor);
-  acceptor.setAcceptorCallback(std::bind(im_on_user_connect,
-                                         std::placeholders::_1, processor));
+  auto processor = make_unique<Processor>(new EpollSelector());
 
-  acceptor.listen(5);
+  auto socket = make_unique<Socket>(socket_make_server("127.0.0.1", 7758));
+  socket_listen(socket.get(), 5);
+
+  auto acceptor = make_shared<TcpAcceptor>(socket->fd_);
+
+  acceptor->setAcceptCallback(bind(im_on_user_connect, acceptor,
+                                   processor.get(),
+                                   std::placeholders::_1));
+
+  acceptor->listen(5);
 
   while (1) {
     cout << "process run" << endl;

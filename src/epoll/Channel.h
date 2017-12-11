@@ -12,19 +12,27 @@
 #include <stdint.h>
 #include <functional>
 #include <memory>
+#include <Processor.h>
 
 class Channel;
 class Processor;
-typedef std::shared_ptr<Channel> ChannelPtr;
-typedef std::function<void(ChannelPtr)> ReadCallback;
-typedef std::function<void(ChannelPtr)> WriteCallback;
-typedef std::function<void(ChannelPtr)> CloseCallback;
-typedef std::function<void(ChannelPtr)> ErrorCallback;
+
+typedef std::weak_ptr<Processor> ProcessorWP;
+typedef std::shared_ptr<Channel> ChannelSP;
+
+typedef std::function<void(ChannelSP)> ReadCallback;
+typedef std::function<void(ChannelSP)> WriteCallback;
+typedef std::function<void(ChannelSP)> CloseCallback;
+typedef std::function<void(ChannelSP)> ErrorCallback;
 
 class Channel : public std::enable_shared_from_this<Channel> {
  public:
-  Channel(int fd, Processor *processor) : fd_(fd), processor_(processor),
-                                          reactorStatus_(false) {}
+  Channel(int fd, ProcessorWP processor)
+      : fd_(fd),
+        processor_(processor),
+        expect_event_(0),
+        incoming_event_(0),
+        reactorStatus_(false) {}
 
   virtual ~Channel() {}
 
@@ -38,9 +46,9 @@ class Channel : public std::enable_shared_from_this<Channel> {
 
   void disableWrite();
 
-  void read(IOReader& reader);
+  void read(IOReader &reader);
 
-  void write(IOWriter& writer);
+  void write(IOWriter &writer);
 
   void setIncomingEvent(uint32_t event);
 
@@ -53,9 +61,7 @@ class Channel : public std::enable_shared_from_this<Channel> {
 
   bool canWrite();
 
-  void updateEvents();
-
-  void addEvents();
+  void updateEvents(EnumSelectorOption::Option op);
 
   void delEvents();
 
@@ -72,12 +78,9 @@ class Channel : public std::enable_shared_from_this<Channel> {
   const ErrorCallback &getErrorCallback() const;
   void setErrorCallback(const ErrorCallback &errorCallback_);
 
-  Processor *getProcessor() const;
-
  private:
   int fd_;
-  Processor *processor_;
-  EnumSelectorOption::Option op_;
+  ProcessorWP processor_;
   uint32_t expect_event_;
   uint32_t incoming_event_;
   bool reactorStatus_;

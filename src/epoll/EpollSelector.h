@@ -11,13 +11,16 @@
 #include <iostream>
 #include <assert.h>
 #include <stdio.h>
+#include <memory>
 
 const uint32_t MAX_EVENTS = 10;
 
-class EpollSelector : public Selector {
+typedef std::unique_ptr<Epoll> EpollUP;
+
+class EpollSelector final : public Selector {
  public:
-  EpollSelector() : epoll_(nullptr) {
-    epoll_ = make_epoll();
+  EpollSelector() {
+    epoll_.reset(make_epoll());
   }
 
   virtual void control(int fd,
@@ -88,7 +91,7 @@ class EpollSelector : public Selector {
   }
 
  private:
-  Epoll *epoll_;
+  EpollUP epoll_;
 };
 
 #endif //EPOLL_EPOLLSELECTOR_H

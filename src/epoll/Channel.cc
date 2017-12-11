@@ -4,34 +4,36 @@
 
 #include "Channel.h"
 #include <iostream>
-void Channel::updateEvents() {
-  if (!reactorStatus_) {
-    op_ = EnumSelectorOption::Option::ADD;
-    reactorStatus_ = true;
+void Channel::updateEvents(EnumSelectorOption::Option op) {
+  if (EnumSelectorOption::MOD==op) {
+    if (!reactorStatus_) {
+      op = EnumSelectorOption::Option::ADD;
+      reactorStatus_ = true;
+    } else {
+      op = EnumSelectorOption::Option::MOD;
+    }
+  } else if (EnumSelectorOption::DEL==op) {
   } else {
-    op_ = EnumSelectorOption::Option::MOD;
+    return;
   }
-  processor_->update(fd_, op_, expect_event_, this);
+
+  if (auto p = processor_.lock()) {
+    p->update(fd_, op, expect_event_, shared_from_this());
+  }
 }
 
 void Channel::enableRead() {
   expect_event_ |= EnumSelectorEvent::Event::ON_READ;
-  updateEvents();
+  updateEvents(EnumSelectorOption::Option::MOD);
 }
 
 void Channel::enableWrite() {
   expect_event_ |= EnumSelectorEvent::Event::ON_WRITE;
-  updateEvents();
-}
-
-void Channel::addEvents() {
-  op_ = EnumSelectorOption::Option::ADD;
-  processor_->update(fd_, EnumSelectorOption::Option::ADD, expect_event_, this);
+  updateEvents(EnumSelectorOption::Option::MOD);
 }
 
 void Channel::delEvents() {
-  op_ = EnumSelectorOption::Option::ADD;
-  processor_->update(fd_, EnumSelectorOption::Option::DEL, expect_event_, this);
+  updateEvents(EnumSelectorOption::Option::DEL);
 }
 
 bool Channel::canRead() {
@@ -39,7 +41,7 @@ bool Channel::canRead() {
 }
 
 bool Channel::canWrite() {
-  return (incoming_event_& EnumSelectorEvent::Event::ON_WRITE)!=0;
+  return (incoming_event_ & EnumSelectorEvent::Event::ON_WRITE)!=0;
 }
 
 bool Channel::isClosed() {
@@ -52,12 +54,12 @@ void Channel::setIncomingEvent(uint32_t event) {
 
 void Channel::disableRead() {
   expect_event_ ^= EnumSelectorEvent::Event::ON_READ;
-  updateEvents();
+  updateEvents(EnumSelectorOption::Option::MOD);
 }
 
 void Channel::disableWrite() {
   expect_event_ ^= EnumSelectorEvent::Event::ON_WRITE;
-  updateEvents();
+  updateEvents(EnumSelectorOption::Option::MOD);
 }
 
 void Channel::react() {
@@ -76,49 +78,58 @@ void Channel::react() {
   }
 }
 
-const ReadCallback &Channel::getReadCallback() const {
+const ReadCallback &
+Channel::getReadCallback() const {
   return readCallback_;
 }
-void Channel::setReadCallback(const ReadCallback &readCallback) {
+
+void
+Channel::setReadCallback(const ReadCallback &readCallback) {
   Channel::readCallback_ = readCallback;
 }
-const WriteCallback &Channel::getWriteCallback() const {
+
+const WriteCallback &
+Channel::getWriteCallback() const {
   return writeCallback_;
 }
 
-void Channel::setWriteCallback(const WriteCallback &writeCallback_) {
+void
+Channel::setWriteCallback(const WriteCallback &writeCallback_) {
   Channel::writeCallback_ = writeCallback_;
 }
 
-const CloseCallback &Channel::getCloseCallback() const {
+const CloseCallback &
+Channel::getCloseCallback() const {
   return closeCallback_;
 }
 
-void Channel::setCloseCallback(const CloseCallback &closeCallback_) {
+void
+Channel::setCloseCallback(const CloseCallback &closeCallback_) {
   Channel::closeCallback_ = closeCallback_;
 }
 
-const ErrorCallback &Channel::getErrorCallback() const {
+const ErrorCallback &
+Channel::getErrorCallback() const {
   return errorCallback_;
 }
 
-void Channel::setErrorCallback(const ErrorCallback &errorCallback_) {
+void
+Channel::setErrorCallback(const ErrorCallback &errorCallback_) {
   Channel::errorCallback_ = errorCallback_;
 }
 
-Processor *Channel::getProcessor() const {
-  return processor_;
-}
-
-void Channel::read(IOReader &reader) {
+void
+Channel::read(IOReader &reader) {
   reader.read(fd_);
 }
 
-void Channel::write(IOWriter &writer) {
+void
+Channel::write(IOWriter &writer) {
   writer.write(fd_);
 }
 
-void Channel::close() {
+void
+Channel::close() {
   ::close(fd_);
 }
 

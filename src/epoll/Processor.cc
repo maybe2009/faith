@@ -7,15 +7,21 @@
 #include <iostream>
 #include <assert.h>
 
-Processor::Processor(Selector *selector) : selector_(selector) {
-
-}
+Processor::Processor(SelectorUP &&selector) : selector_(std::move(selector)) {}
 
 void Processor::update(int fd,
                        EnumSelectorOption::Option op,
                        uint32_t ev,
-                       Channel *reactor) {
-  selector_->control(fd, op, ev, reactor);
+                       ChannelSP reactor) {
+  if (EnumSelectorOption::Option::MOD==op ||
+      EnumSelectorOption::Option::ADD==op) {
+    channels_.insert(make_pair(reinterpret_cast<uintptr_t>(reactor.get()),
+                               reactor));
+  } else if (EnumSelectorOption::Option::DEL==op) {
+    channels_.erase(reinterpret_cast<uintptr_t >(reactor.get()));
+  }
+
+  selector_->control(fd, op, ev, reactor.get());
 }
 
 void Processor::process() {
@@ -23,8 +29,10 @@ void Processor::process() {
   selector_->select(active_reactors);
 
   for (auto active : active_reactors) {
-    assert(active != nullptr);
-    std::cout << active << std::endl;
-    active->react();
+    assert(active!=nullptr);
+
+    ChannelSP &channel = channels_.at(reinterpret_cast<uintptr_t >(active));
+    std::cout << channel.get() << std::endl;
+    channel->react();
   }
 }
