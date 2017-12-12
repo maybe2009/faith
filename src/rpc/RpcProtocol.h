@@ -6,6 +6,7 @@
 #define EPOLL_RPCPROTOCOL_H
 
 #include <Buffer.h>
+#include <string>
 
 namespace Rpc {
 class RpcProtocolBase {

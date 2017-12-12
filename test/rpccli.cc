@@ -8,6 +8,13 @@
 #include <iostream>
 
 using namespace std;
+using namespace Rpc;
+
+void handlerSimpleResponse(Socket* peer, const SimpleResponse& response) {
+
+  cout << "result is " << response.c << endl;
+}
+
 int main(int argc, const char *argv[]) {
   if (argc!=3) {
     cout << "argument: ip port" << endl;
@@ -24,15 +31,26 @@ int main(int argc, const char *argv[]) {
     cout << "connect to " << socket_peer_ip(&client) << ":"
          << socket_peer_port(&client) << endl;
 
-    Buffer buf(10);
-    buf.write("Lily", sizeof("Lily"));
+    Buffer buf(8);
+    SimpleRequest request;
+    request.a = 1;
+    request.b = 2;
+    encode(request, buf);
+
     socket_write(&client, buf);
+
+    buf.clear();
+    socket_read(&client, buf);
+
+    SimpleResponse response;
+    decode(buf, response);
+    handlerSimpleResponse(&client, response);
 
     socket_close(&client);
   } catch (SocketException &e) {
-    cout << e.what() << endl;
+    cout << "socket exception " << e.what() << endl;
   } catch (BufferException &e) {
-    cout << e.what() << endl;
+    cout << "buffer exception " << e.what() << endl;
   }
 
   return 0;

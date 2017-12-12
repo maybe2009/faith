@@ -104,7 +104,7 @@ size_t socket_read(Socket *socket, Buffer &buffer) {
 }
 
 size_t socket_write(Socket *socket, const Buffer &buffer) {
-  ssize_t nwrite = ::write(socket->fd_, buffer.seekHead(), buffer.size());
+  ssize_t nwrite = ::write(socket->fd_, buffer.head(), buffer.size());
   if (0 > nwrite) {
     throw (SocketException(strerror(errno)));
   }

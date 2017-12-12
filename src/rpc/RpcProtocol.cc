@@ -4,8 +4,7 @@
 
 #include "RpcProtocol.h"
 
-using namespace Rpc;
-
+namespace Rpc {
 void SimpleRequest::operator<<(Buffer &buf) {
   buf.pop(&a);
   buf.pop(&b);
@@ -25,4 +24,5 @@ void SimpleResponse::operator<<(Buffer &buf) {
 }
 void SimpleResponse::operator>>(Buffer &buf) const {
   buf.push(&c);
+}
 }

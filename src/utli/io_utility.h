@@ -41,7 +41,7 @@ class BufferReader : public IOReader {
   }
 
   std::string getBufData() {
-    return std::string(buf_.seekHead(), buf_.size());
+    return std::string(buf_.head(), buf_.size());
   }
 
   void clear() {
@@ -62,7 +62,7 @@ class BufferWriter : public IOWriter {
   }
 
   uint64_t write(int fd) override {
-    int nwrite = ::write(fd, buf_.seekHead(), buf_.size());
+    int nwrite = ::write(fd, buf_.head(), buf_.size());
     if (nwrite <0) {
       printf("writer error\n");
       return 0;

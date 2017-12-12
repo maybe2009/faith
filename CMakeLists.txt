@@ -11,5 +11,6 @@ include_directories(src/rpc)
 
 add_subdirectory(src/epoll)
 add_subdirectory(src/net)
+add_subdirectory(src/rpc)
 add_subdirectory(test)
 

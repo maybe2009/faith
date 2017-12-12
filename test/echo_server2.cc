@@ -33,7 +33,7 @@ void im_on_user_data(ChannelSP channel) {
   Buffer buf(100);
   BufferReader reader(buf);
   channel->read(reader);
-  string msg(buf.seekHead(), buf.size());
+  string msg(buf.head(), buf.size());
   cout << "im_on_user_data " << msg << endl;
 
   TelnetIMDecoder decoder;

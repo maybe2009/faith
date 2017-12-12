@@ -112,37 +112,34 @@ class Buffer {
 
  public:
   Buffer(uint64_t size) : capacity_(size),
-                          curIndex_(0),
-                          freeSize_(size) {
+                          push_index_(0),
+                          pop_index_(0) {
     buffer_ = (BYTE *) malloc(sizeof(BYTE)*capacity_);
     popPos_ = buffer_;
   }
 
   uint64_t write(const void *buf, uint64_t size) {
-    uint64_t nwrite = size > freeSize_ ? freeSize_ : size;
-    memcpy(buffer_ + curIndex_, buf, nwrite);
-
-    curIndex_ += nwrite;
-    freeSize_ -= nwrite;
-
+    uint64_t nwrite = size > freeSize() ? freeSize() : size;
+    memcpy(buffer_ + push_index_, buf, nwrite);
+    push_index_ += nwrite;
     return nwrite;
   }
 
   uint64_t readFromFd(int fd, int *err) {
-    ssize_t nread = ::read(fd, seekCurrent(), freeSize());
+    *err = 0;
+    ssize_t nread = ::read(fd, current(), freeSize());
     if (nread < 0) {
       *err = errno;
       return 0;
     } else {
-      curIndex_ += nread;
-      freeSize_ -= nread;
+      push_index_ += nread;
       return nread;
     }
   }
 
   void clear() {
-    curIndex_ = 0;
-    freeSize_ = capacity_;
+    push_index_ = 0;
+    pop_index_ = 0;
     popPos_ = buffer_;
   }
 
@@ -151,50 +148,58 @@ class Buffer {
     return buffer_ + offset;
   }
 
-  BYTE *seekHead() const {
+  BYTE *head() const {
     return seek(0);
   }
 
-  BYTE *seekCurrent() const {
-    return seek(curIndex_);
+  BYTE *current() const {
+    return seek(push_index_);
   }
 
   uint64_t freeSize() const {
-    return freeSize_;
+    return capacity_ - push_index_;
   }
 
   uint64_t size() const {
-    return curIndex_;
+    return push_index_;
   }
 
   template<typename T>
   size_t pop(T *dst) {
-    if (sizeof(T) > freeSize_) {
+    if (sizeof(T) > freeSize()) {
       throw BufferException("expected pop size is larger then free size of "
                                 "buffer");
     }
-
-    memcpy(dst, buffer_ + curIndex_, sizeof(T));
-    curIndex_ += sizeof(T);
-    freeSize_ -= sizeof(T);
-
+//    for (auto i = 0; i < sizeof(T); i++) {
+//      printf("%x ", *(buffer_+i));
+//    }
+//    printf("curIndex is %u, size if %u\n", push_index_, sizeof(T));
+    memcpy(dst, buffer_ + pop_index_, sizeof(T));
+    pop_index_ += sizeof(T);
     return sizeof(T);
   }
 
   template<typename T>
   size_t push(T *src) {
-    if (sizeof(T) > freeSize_) {
+    printf("push %u\n", freeSize());
+    if (sizeof(T) > freeSize()) {
       throw BufferException("expected push size is larger then free size of "
                                 "buffer");
     }
 
-    memcpy(buffer_ + curIndex_, src, sizeof(T));
-
+    memcpy(buffer_ + push_index_, src, sizeof(T));
+    push_index_ += sizeof(T);
     return sizeof(T);
   }
 
   BinaryReader getReader() const {
     return BinaryReader(buffer_, capacity_);
+  }
+
+  void print() {
+    for (uint64_t i = 0; i < push_index_; i++) {
+      printf("%x ", *(buffer_+i));
+    }
   }
 
   ~Buffer() {
@@ -203,8 +208,8 @@ class Buffer {
 
  private:
   uint64_t capacity_;
-  uint64_t curIndex_;
-  uint64_t freeSize_;
+  uint64_t push_index_;
+  uint64_t pop_index_;
   BYTE *buffer_;
   BYTE *popPos_;
 };
