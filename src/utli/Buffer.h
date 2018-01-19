@@ -180,7 +180,7 @@ class Buffer {
   }
 
   template<typename T>
-  size_t push(T *src) {
+  size_t push(const T *src) {
     printf("push %u\n", freeSize());
     if (sizeof(T) > freeSize()) {
       throw BufferException("expected push size is larger then free size of "

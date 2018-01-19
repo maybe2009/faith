@@ -10,3 +10,5 @@ target_link_libraries(rpccli faithnet faithrpc)
 add_executable(rpcsrv rpcsrv.cc)
 target_link_libraries(rpcsrv faithnet faithrpc)
 #add_executable(test_im_decoder test_im_decoder.cc)
+
+add_executable(test_zzp test_zzp.cc)

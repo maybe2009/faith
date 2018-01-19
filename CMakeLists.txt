@@ -8,6 +8,7 @@ include_directories(src/epoll)
 include_directories(src/net)
 include_directories(src/utli)
 include_directories(src/rpc)
+include_directories(src/Serialization)
 
 add_subdirectory(src/epoll)
 add_subdirectory(src/net)
