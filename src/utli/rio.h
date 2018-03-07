@@ -27,10 +27,10 @@ ssize_t rio_readn(int fd, void* dst, size_t n) {
     ssize_t nread = read(fd, buf, nleft);
     if (nread <= 0) {
       if (0 == nread) {
-        break;
+        break;  //nothing to read, just return
       }
-      else if (EINTR == nread || EAGAIN == nread || EWOULDBLOCK == nread) {
-        nread = 0;
+      else if (EINTR == nread) {
+        nread = 0;  //interrupted, resume
       }
       else {
         return -1;
@@ -51,7 +51,7 @@ ssize_t rio_writen(int fd, void* dst, size_t n) {
   while (nleft > 0) {
     ssize_t  nwrite = write(fd, buf, nleft);
     if (nwrite < 0) {
-      if (EINTR == nwrite || EAGAIN == nwrite || EWOULDBLOCK == nwrite) {
+      if (EINTR == nwrite) {
         nwrite = 0;
       }
       else {
