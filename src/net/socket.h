@@ -26,7 +26,7 @@ Socket *socket_make_server(const char *ip, uint16_t port);
 
 Socket *socket_make_client();
 
-void socket_close(Socket* socket);
+void socket_close(Socket *socket);
 
 bool socket_listen(Socket *server, uint32_t backlog);
 

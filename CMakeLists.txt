@@ -13,5 +13,7 @@ include_directories(src/Serialization)
 add_subdirectory(src/epoll)
 add_subdirectory(src/net)
 add_subdirectory(src/rpc)
+add_subdirectory(example)
+add_subdirectory(thirdparty)
 add_subdirectory(test)
 
