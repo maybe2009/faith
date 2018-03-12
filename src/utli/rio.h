@@ -18,21 +18,19 @@ void unix_error(char *msg) /* unix-style error */
   exit(0);
 }
 
-//Only return with n bytes written to dst, or error
-ssize_t rio_readn(int fd, void* dst, size_t n) {
+//Only return with n bytes read to dst, or error
+ssize_t rio_readn(int fd, void *dst, size_t n) {
   size_t nleft = n;
-  char* buf = (char*)dst;
+  char *buf = (char *) dst;
 
   while (nleft > 0) {
     ssize_t nread = read(fd, buf, nleft);
     if (nread <= 0) {
-      if (0 == nread) {
+      if (0==nread) {
         break;  //nothing to read, just return
-      }
-      else if (EINTR == nread) {
+      } else if (EINTR==nread) {
         nread = 0;  //interrupted, resume
-      }
-      else {
+      } else {
         return -1;
       }
     }
@@ -44,23 +42,26 @@ ssize_t rio_readn(int fd, void* dst, size_t n) {
   return n - nleft;
 }
 
-ssize_t rio_writen(int fd, void* dst, size_t n) {
+//Only return with n bytes written to dst, or error
+ssize_t rio_writen(int fd, const void *dst, size_t n) {
   size_t nleft = n;
-  char* buf = (char*)dst;
+  const char *buf = (const char *) dst;
 
   while (nleft > 0) {
-    ssize_t  nwrite = write(fd, buf, nleft);
+    ssize_t nwrite = write(fd, buf, nleft);
+    printf("nwrite %ld\n", nwrite);
+    //nwrite shall not be 0 in any condition according to POSIX
     if (nwrite < 0) {
-      if (EINTR == nwrite) {
+      if (EINTR==nwrite) {
         nwrite = 0;
-      }
-      else {
+      } else {
         return -1;
       }
     }
 
     nleft = nleft - nwrite;
     buf = buf + nleft;
+    printf("nleft %lu\n", nleft);
   }
 
   return n - nleft;
@@ -70,25 +71,42 @@ ssize_t rio_writen(int fd, void* dst, size_t n) {
 typedef struct {
   int fd;
   char buf[RIO_BUFFER_SIZE];
-  char* buf_ptr;
-  char* read_ptr;
+  char *buf_ptr;
+  char *read_ptr;
 } rio_t;
 
-void rio_init(rio_t* rp, int fd) {
+void rio_init(rio_t *rp, int fd) {
   rp->fd = fd;
   rp->buf_ptr = rp->buf;
   rp->read_ptr = rp->buf;
 }
 
-size_t rio_left(rio_t* rp) {
+rio_t* make_rio_t(int fd) {
+  rio_t *rp = (rio_t*) malloc(sizeof(rio_t));
+  rio_init(rp, fd);
+  return rp;
+}
+
+size_t rio_len(rio_t *rp) {
+  return (rp->buf_ptr - rp->buf);
+}
+
+//Unread data in bytes
+size_t rio_left(rio_t *rp) {
   return (rp->buf_ptr - rp->read_ptr);
 }
 
-ssize_t rio_bread(rio_t* rp, void* dst, size_t n) {
+//Remain space for write in bytes
+size_t rio_free(rio_t *rp) {
+  return (rp->buf + RIO_BUFFER_SIZE) - rp->buf_ptr;
+}
+
+//Buffer read, if not enough data, return all in buffer
+ssize_t rio_bread(rio_t *rp, void *dst, size_t n) {
   //refill
-  if (0 == rio_left(rp)) {
+  if (0==rio_left(rp)) {
     ssize_t nread = rio_readn(rp->fd, rp->buf_ptr, RIO_BUFFER_SIZE);
-    if (-1 == nread || 0 == nread) {
+    if (-1==nread || 0==nread) {
       return nread;
     }
     rp->buf_ptr += nread;
@@ -100,22 +118,22 @@ ssize_t rio_bread(rio_t* rp, void* dst, size_t n) {
   return min;
 }
 
-ssize_t rio_breadline(rio_t* rp, void* dst, size_t max_len) {
+ssize_t rio_breadline(rio_t *rp, void *dst, size_t max_len) {
   if (max_len < 1) {
     return 0;
   }
 
   size_t left = max_len;
-  char* buf = (char*)dst;
-  while(left-- > 0) {
+  char *buf = (char *) dst;
+  while (left-- > 0) {
     char c;
     ssize_t nread = rio_bread(rp, &c, 1);
-    if (-1 == nread || 0 == nread) {
+    if (-1==nread || 0==nread) {
       return nread;
     }
 
     *buf++ = c;
-    if ('\n' == c) {
+    if ('\n'==c) {
       break;
     }
   }

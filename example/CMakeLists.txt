@@ -14,3 +14,9 @@ target_link_libraries(rpcsrv faithnet faithrpc)
 add_executable(test_zzp test_zzp.cc)
 
 add_executable(test_rio test_rio.cc)
+
+add_executable(test-client-api client-api.cc)
+target_link_libraries(test-client-api faithnet)
+
+add_executable(test-server-api server-api.cc)
+target_link_libraries(test-server-api faithnet)

@@ -75,4 +75,15 @@ class BufferWriter : public IOWriter {
  private:
   Buffer buf_;
 };
+
+class Reader {
+ public:
+  virtual ssize_t readn(void *dst, size_t n) = 0;
+  virtual ssize_t readnb(void *dst, size_t n) = 0;
+};
+
+class Writer {
+ public:
+  virtual ssize_t writen(const void *dst, size_t n) = 0;
+};
 #endif //EPOLL_IOUTILITY_H
