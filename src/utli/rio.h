@@ -31,6 +31,7 @@ ssize_t rio_readn(int fd, void *dst, size_t n) {
       } else if (EINTR==nread) {
         nread = 0;  //interrupted, resume
       } else {
+        perror("rio_readn: ");
         return -1;
       }
     }
@@ -55,6 +56,7 @@ ssize_t rio_writen(int fd, const void *dst, size_t n) {
       if (EINTR==nwrite) {
         nwrite = 0;
       } else {
+        perror("rio_readn: ");
         return -1;
       }
     }

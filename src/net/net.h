@@ -11,6 +11,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 
 using namespace rio;
 
@@ -28,13 +31,29 @@ class TcpConn final {
 
   void shutdownRead() {
     if (shutdown(fd, SHUT_RD) != 0) {
-      std::cerr << "shutdown error" << std::endl;
+      std::cerr << "shutdown error " << errno << std::endl;
+    }
+  }
+
+  void tcpNoDelay() {
+    int flag = 1;
+    int result = setsockopt(fd,            /* socket affected */
+                            IPPROTO_TCP,     /* set option at TCP level */
+                            TCP_NODELAY,     /* name of option */
+                            (char *) &flag,  /* the cast is historical
+                                                         cruft */
+                            sizeof(int));    /* length of option value */
+
+    if (result != 0) {
+      std::cerr << "setsockopt error " << errno << std::endl;
     }
   }
 
   void close() {
     ::close(fd);
   }
+
+
 
  private:
   int fd;
