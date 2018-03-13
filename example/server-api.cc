@@ -13,55 +13,49 @@ void signalPipe(int signal) {
   cout << "signal pipe occured: " << signal << endl;
 }
 
+void TestShutdownWriteServer(std::string ip, uint16_t port) {
+  unique_ptr<TcpListener> listener(TcpListen(ip.c_str(), port));
+  unique_ptr<TcpConn> conn(listener->Accept());
+
+  //Read until EOF
+  int ret = 0;
+  do {
+    char c;
+    ret = conn->reader.readn(&c, 1);
+  } while (ret > 0);
+
+  //Ok, client has sent FIN and step into FIN_WAIT2 now, we are in CLOSE_WAIT
+
+  //We can still write as usual
+  int count = 20;
+  do {
+    ret = conn->writer.writen("a", 1);
+    if (ret <= 0) {
+      cout << "no, it can't be!" << endl;
+    }
+  } while(count-- > 0 && ret > 0);
+
+  //If we read again, EOF is returned
+  char c;
+  ret = conn->reader.readn(&c, 1);
+  if (ret != 0) {
+    cout << "no, it can't be!" << endl;
+  }
+
+  return;
+}
+
 int main(int argc, const char *argv[]) {
   if (argc!=3) {
     cout << "argument: ip port" << endl;
     exit(1);
   }
 
-  signal(SIGPIPE, signalPipe);
-
   string ip(argv[1]);
   uint16_t port = atoi(argv[2]);
 
-  unique_ptr<TcpListener> listen(TcpListen(ip.c_str(), port));
-  while(1) {
-    TcpConn *conn = listen->Accept();
-
-    char buf[1024];
-    char *ptr = buf;
-    uint32_t count = 20;
-
-    ssize_t ret = 0;
-    do {
-      ret = conn->reader.readn(ptr++, 1);
-      //cout << "read reurn " << ret << endl;
-    } while (ret > 0 && count-- > 0);
-    *ptr = 0;
-    cout << "client request: " << buf << endl;
-
-    cout << "first write return "
-         << conn->writer.writen("Hello human.", sizeof("Hello human.")) << endl;
-
-    sleep(5);
-
-    if (ret==0) {
-      ret = conn->reader.readn(ptr++, 1);
-      cout << "read more ret " << ret << endl;
-
-      cout << "second write return "
-           << conn->writer.writen("Hello!", sizeof("Hello!")) << endl;
-      sleep(10);
-
-      cout << "third write return "
-           << conn->writer.writen("Hello!", sizeof("Hello!")) << endl;
-
-      conn->close();
-    }
-  }
+  TestShutdownWriteServer(ip, port);
 
   cout << "bye" << endl;
-
-  sleep(1);
   return 0;
 }
