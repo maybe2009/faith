@@ -20,7 +20,11 @@ using namespace rio;
 namespace net {
 class TcpConn final {
  public:
-  explicit TcpConn(int _fd) : fd(_fd), reader(_fd), writer(_fd){
+  explicit TcpConn(int _fd) : fd(_fd), reader(_fd), writer(_fd), closed(false){
+  }
+
+  ~TcpConn() {
+    this->close();
   }
 
   void shutdownWrite() {
@@ -50,7 +54,10 @@ class TcpConn final {
   }
 
   void close() {
-    ::close(fd);
+    if (!closed) {
+      closed = true;
+      ::close(fd);
+    }
   }
 
 
@@ -60,6 +67,7 @@ class TcpConn final {
  public:
   class ReaderWrapper reader;
   class WriterWrapper writer;
+  bool closed;
 };
 
 class TcpListener final {

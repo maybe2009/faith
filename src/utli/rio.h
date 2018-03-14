@@ -50,7 +50,7 @@ ssize_t rio_writen(int fd, const void *dst, size_t n) {
 
   while (nleft > 0) {
     ssize_t nwrite = write(fd, buf, nleft);
-    printf("nwrite %ld\n", nwrite);
+
     //nwrite shall not be 0 in any condition according to POSIX
     if (nwrite < 0) {
       if (EINTR==nwrite) {
@@ -63,7 +63,6 @@ ssize_t rio_writen(int fd, const void *dst, size_t n) {
 
     nleft = nleft - nwrite;
     buf = buf + nleft;
-    printf("nleft %lu\n", nleft);
   }
 
   return n - nleft;
