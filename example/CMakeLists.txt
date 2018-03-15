@@ -20,3 +20,6 @@ target_link_libraries(test-client-api faithnet)
 
 add_executable(test-server-api server-api.cc)
 target_link_libraries(test-server-api faithnet)
+
+add_executable(test-connect nonblocking-connection.cc)
+target_link_libraries(test-connect faithnet)

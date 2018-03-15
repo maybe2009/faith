@@ -8,12 +8,14 @@
 
 class SocketException final : public std::exception {
  public:
-  SocketException(const char *what) : what_(what) {}
-
+  SocketException(const char *what) : what_(what), errno_(0) {}
+  SocketException(const char *what, int err)
+      : what_(what), errno_(err) {}
   const char *what() const noexcept override;
-
  private:
   std::string what_;
+ public:
+  int errno_;
 };
 
 struct Socket {

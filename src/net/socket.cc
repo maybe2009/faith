@@ -85,7 +85,7 @@ void socket_connect(Socket *socket, const char *ip, uint16_t port) {
   address.sin_family = AF_INET;
   address.sin_port = htons(port);
   if (inet_pton(AF_INET, ip, &address.sin_addr)!=1) {
-    throw (SocketException(strerror(errno)));
+    throw (SocketException(strerror(errno), errno));
   }
 
   if (::connect(socket->fd_, (struct sockaddr *) (&address), sizeof(address))
