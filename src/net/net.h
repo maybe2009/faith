@@ -121,6 +121,13 @@ int socket() {
   return ::socket(AF_INET, SOCK_STREAM, 0);
 }
 
+int bind(int socket, struct sockaddr * addr) {
+  if (::bind(socket, addr, sizeof(*addr)) != 0) {
+    return -1;
+  }
+  return 0;
+}
+
 int listen(int socket, int backlog) {
   if (::listen(socket, backlog) < 0) {
     return -1;
@@ -129,10 +136,11 @@ int listen(int socket, int backlog) {
 }
 
 int accept(int socket) {
-  if (::accept(socket, NULL, NULL) < 0) {
+  int newfd = ::accept(socket, NULL, NULL);
+  if (newfd < 0) {
     return -1;
   }
-  return 0;
+  return newfd;
 }
 
 int connect(int socket, struct sockaddr* addr) {

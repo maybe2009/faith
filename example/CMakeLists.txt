@@ -23,3 +23,9 @@ target_link_libraries(test-server-api faithnet)
 
 add_executable(test-connect nonblocking-connection.cc)
 target_link_libraries(test-connect faithnet)
+
+add_executable(test-epoll-server epoll-server.cc)
+target_link_libraries(test-epoll-server faithnet)
+
+add_executable(test-epoll-client epoll-client.cc)
+target_link_libraries(test-epoll-client faithnet)
